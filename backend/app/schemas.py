@@ -1,11 +1,11 @@
 from pydantic import BaseModel, EmailStr
 
 
-# Schemas Users
 class Message(BaseModel):
     message: str
 
 
+# Schemas Users
 class UserSchema(BaseModel):
     username: str
     email: EmailStr

@@ -34,3 +34,5 @@ async def test_create_user_with_same_email(user, client):
     )
 
     assert response.status_code == HTTPStatus.CONFLICT
+
+

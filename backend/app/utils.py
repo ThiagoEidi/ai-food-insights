@@ -1,6 +1,9 @@
 import re
 
+from pwdlib import PasswordHash
 from sqlalchemy.exc import IntegrityError
+
+pwd_context = PasswordHash.recommended()
 
 
 def sanitizar_name(username: str) -> str:
@@ -20,3 +23,11 @@ def handle_integrity_error(error: IntegrityError) -> str:
     key = error.args[0].split('"')[1]
 
     return dicio[key]
+
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str):
+    return pwd_context.verify(plain_password, hashed_password)

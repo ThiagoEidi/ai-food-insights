@@ -1,9 +1,8 @@
-from dataclasses import asdict
-
 import pytest
 from sqlalchemy import select
 
 from app.models import User
+from app.utils import verify_password
 
 
 @pytest.mark.asyncio
@@ -22,9 +21,7 @@ async def test_create_user_db(session):
         select(User).where(User.email == 'algum@email.com')
     )
 
-    assert asdict(user_db) == {
-        'username': 'thiago',
-        'email': 'algum@email.com',
-        'senha': '123',
-        'id': 1,
-    }
+    assert user_db.username == 'thiago'
+    assert user_db.email == 'algum@email.com'
+    assert user_db.id == 1
+    assert verify_password('123', user_db.senha)

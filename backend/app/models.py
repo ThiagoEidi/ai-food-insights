@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column, registry, validates
 
-from app.utils import sanitizar_name
+from app.utils import hash_password, sanitizar_name
 
 table_registry = registry()
 
@@ -19,7 +19,5 @@ class User:
         return sanitizar_name(name)
 
     @validates('senha')
-    def validar_senha(self, key, plain_password: str) -> str:
-        if len(plain_password) < 8:
-            raise ValueError("A senha deve ter pelo menos 8 caracteres.")
-        return hash_password(plain_password) 
+    def validar_senha(self, key, password: str) -> str:  # noqa: PLR6301
+        return hash_password(password)
