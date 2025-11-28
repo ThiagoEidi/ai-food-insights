@@ -1,5 +1,7 @@
 from pydantic import BaseModel, EmailStr
 
+from app.enums import UserRole
+
 
 class Message(BaseModel):
     message: str
@@ -9,6 +11,7 @@ class Message(BaseModel):
 class UserSchema(BaseModel):
     username: str
     email: EmailStr
+    role: UserRole
     senha: str
 
 

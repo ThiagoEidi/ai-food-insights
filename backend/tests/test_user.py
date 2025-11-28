@@ -2,6 +2,8 @@ from http import HTTPStatus
 
 import pytest
 
+from app.enums import UserRole
+
 
 @pytest.mark.asyncio
 async def test_create_user(client, session):
@@ -10,6 +12,7 @@ async def test_create_user(client, session):
         json={
             'username': ' Thiago Eidi HAMada',
             'email': 'teste@teste.com',
+            'role': UserRole.PARTNER,
             'senha': '123',
         },
     )
@@ -29,10 +32,9 @@ async def test_create_user_with_same_email(user, client):
         json={
             'username': 'teste',
             'email': user.email,
+            'role': UserRole.CLIENT,
             'senha': '123',
         },
     )
 
     assert response.status_code == HTTPStatus.CONFLICT
-
-

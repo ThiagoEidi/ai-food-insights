@@ -1,6 +1,7 @@
 import pytest
 from sqlalchemy import select
 
+from app.enums import UserRole
 from app.models import User
 from app.utils import verify_password
 
@@ -10,6 +11,7 @@ async def test_create_user_db(session):
     new_user = User(
         username='thiago',
         email='algum@email.com',
+        role=UserRole.CLIENT,
         senha='123',
     )
 
