@@ -5,18 +5,19 @@ from sqlalchemy.exc import IntegrityError
 
 from app.database import Session
 from app.models import User
-from app.schemas import UserPublic, UserSchema
+from app.schemas import UserPost, UserPublic
 from app.utils import handle_integrity_error
 
 router = APIRouter(prefix='/conta', tags=['conta'])
 
 
 @router.post('/', response_model=UserPublic, status_code=HTTPStatus.CREATED)
-async def create_user(user: UserSchema, session: Session):
+async def create_user(user: UserPost, session: Session):
     try:
         db_user = User(
             username=user.username,
             email=user.email,
+            role=user.role,
             senha=user.senha,
         )
         session.add(db_user)

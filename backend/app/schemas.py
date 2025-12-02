@@ -1,6 +1,8 @@
+from typing import List
+
 from pydantic import BaseModel, EmailStr
 
-from app.enums import UserRole
+from app.models import FoodTypeModel, UserRole
 
 
 class Message(BaseModel):
@@ -8,7 +10,7 @@ class Message(BaseModel):
 
 
 # Schemas Users
-class UserSchema(BaseModel):
+class UserPost(BaseModel):
     username: str
     email: EmailStr
     role: UserRole
@@ -19,3 +21,11 @@ class UserPublic(BaseModel):
     id: int
     username: str
     email: EmailStr
+
+
+# Schemas Stores
+class StorePost:
+    name: str
+    address: str
+    partner_id: int
+    food_types: List[FoodTypeModel]
