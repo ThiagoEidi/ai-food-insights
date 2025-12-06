@@ -1,98 +1,142 @@
-from enum import Enum
+from typing import List
 
-from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import ForeignKey
+from sqlalchemy import Enum, ForeignKey, String
 from sqlalchemy.orm import (
+    DeclarativeBase,
     Mapped,
     mapped_column,
-    registry,
     relationship,
     validates,
 )
 
+from app.enums import OrderStatus
 from app.utils import hash_password, sanitizar_name
 
-table_registry = registry()
+
+class Base(DeclarativeBase):
+    pass
 
 
-class UserRole(Enum):
-    CLIENT = 'client'
-    PARTNER = 'partner'
-    ADMIN = 'admin'
-
-
-@table_registry.mapped_as_dataclass
-class User:
+class User(Base):
     __tablename__ = 'users'
+    __mapper_args__ = {
+        'polymorphic_identity': 'user',
+        'polymorphic_on': 'type',
+    }
 
-    id: Mapped[int] = mapped_column(init=False, primary_key=True)
-    username: Mapped[str]
-    email: Mapped[str] = mapped_column(unique=True)
-    senha: Mapped[str]
+    id: Mapped[int] = mapped_column(primary_key=True)
+    type: Mapped[str]
 
-    stores_owned: Mapped[list['Store']] = relationship(
-        back_populates='partner',
-        default_factory=list,
-    )
-
-    role: Mapped[UserRole] = mapped_column(
-        SqlEnum(UserRole),
-        default=UserRole.CLIENT,
-    )
-
-    @validates('username')
-    def validar_username(self, key, name: str) -> str:  # noqa: PLR6301
-        return sanitizar_name(name)
+    email: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
+    senha: Mapped[str] = mapped_column(String(256), nullable=False)
 
     @validates('senha')
-    def validar_senha(self, key, password: str) -> str:  # noqa: PLR6301
-        return hash_password(password)
+    def validate_password(self, key, value: str) -> str:  # noqa: PLR6301
+        return hash_password(value)
 
 
-@table_registry.mapped_as_dataclass
-class StoreFoodTypes:
-    __tablename__ = 'store_food_types'
+class Client(User):
+    __tablename__ = 'clients'
+    __mapper_args__ = {'polymorphic_identity': 'client'}
 
-    store_id: Mapped[int] = mapped_column(
-        ForeignKey('stores.id'), primary_key=True, init=False
+    id: Mapped[int] = mapped_column(ForeignKey('users.id'), primary_key=True)
+    username: Mapped[str] = mapped_column(String(100))
+    orders: Mapped[List['Order']] = relationship(back_populates='client')
+
+    @validates('username')
+    def validate_username(self, key, value: str) -> str:  # noqa: PLR6301
+        return sanitizar_name(value)
+
+
+class Admin(User):
+    __tablename__ = 'admins'
+    __mapper_args__ = {'polymorphic_identity': 'admin'}
+
+    id: Mapped[int] = mapped_column(ForeignKey('users.id'), primary_key=True)
+
+
+class Partner(User):
+    __tablename__ = 'partners'
+    __mapper_args__ = {'polymorphic_identity': 'partner'}
+
+    id: Mapped[int] = mapped_column(ForeignKey('users.id'), primary_key=True)
+
+    name: Mapped[str]
+    address: Mapped[str]
+
+    categories: Mapped[List['PartnerFoodTypes']] = relationship(
+        back_populates='partner', cascade='all, delete-orphan'
     )
+    items: Mapped[List['Item']] = relationship(
+        back_populates='partner', cascade='all, delete-orphan'
+    )
+    orders: Mapped[List['Order']] = relationship(back_populates='partner_restaurant')
 
+
+class PartnerFoodTypes(Base):
+    __tablename__ = 'partner_food_types'
+
+    partner_id: Mapped[int] = mapped_column(ForeignKey('partners.id'), primary_key=True)
     food_type_id: Mapped[int] = mapped_column(
         ForeignKey('food_types.id'), primary_key=True
     )
 
-    store: Mapped['Store'] = relationship(
-        back_populates='food_type_associations', init=False
-    )
-    food_type: Mapped['FoodTypeModel'] = relationship(
-        back_populates='store_associations', init=False
-    )
+    partner: Mapped['Partner'] = relationship(back_populates='categories')
+    food_type: Mapped['FoodType'] = relationship(back_populates='partner_associations')
 
 
-@table_registry.mapped_as_dataclass
-class FoodTypeModel:
+class FoodType(Base):
     __tablename__ = 'food_types'
 
-    id: Mapped[int] = mapped_column(init=False, primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True)
 
-    store_associations: Mapped[list['StoreFoodTypes']] = relationship(
+    partner_associations: Mapped[List['PartnerFoodTypes']] = relationship(
         back_populates='food_type', cascade='all, delete-orphan'
     )
 
 
-@table_registry.mapped_as_dataclass
-class Store:
-    __tablename__ = 'stores'
+class Item(Base):
+    __tablename__ = 'items'
 
-    id: Mapped[int] = mapped_column(init=False, primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
-    address: Mapped[str]
+    price: Mapped[float]
+    description: Mapped[str | None]
 
-    partner_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
-
-    food_type_associations: Mapped[list['StoreFoodTypes']] = relationship(
-        back_populates='store', cascade='all, delete-orphan'
+    order_items: Mapped[List['OrderItem']] = relationship(
+        back_populates='item', cascade='all, delete-orphan'
     )
 
-    partner: Mapped[User] = relationship(back_populates='stores_owned', init=False)
+    partner_id: Mapped[int] = mapped_column(ForeignKey('partners.id'))
+    partner: Mapped['Partner'] = relationship(back_populates='items')
+
+
+class Order(Base):
+    __tablename__ = 'orders'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey('clients.id'))
+    partner_id: Mapped[int] = mapped_column(ForeignKey('partners.id'))
+
+    status: Mapped[OrderStatus] = mapped_column(Enum(OrderStatus), nullable=False)
+    total: Mapped[float]
+    client: Mapped['Client'] = relationship(back_populates='orders')
+    partner_restaurant: Mapped['Partner'] = relationship(back_populates='orders')
+
+    items: Mapped[List['OrderItem']] = relationship(
+        back_populates='order', cascade='all, delete-orphan'
+    )
+ 
+
+class OrderItem(Base):
+    __tablename__ = 'order_items'
+
+    order_id: Mapped[int] = mapped_column(ForeignKey('orders.id'), primary_key=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey('items.id'), primary_key=True)
+
+    quantity: Mapped[int]
+    price_at_purchase: Mapped[float]
+
+    order: Mapped['Order'] = relationship(back_populates='items')
+    item: Mapped['Item'] = relationship(back_populates='order_items')

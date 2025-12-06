@@ -6,7 +6,7 @@ from testcontainers.postgres import PostgresContainer
 
 from app.database import get_async_session
 from app.main import app
-from app.models import table_registry
+from app.models import Base
 from tests.factories import UserFactory
 
 
@@ -20,13 +20,13 @@ def engine():
 @pytest_asyncio.fixture
 async def session(engine):
     async with engine.begin() as conn:
-        await conn.run_sync(table_registry.metadata.create_all)
+        await conn.run_sync(Base.metadata.create_all)
 
     async with AsyncSession(engine, expire_on_commit=False) as session:
         yield session
 
     async with engine.begin() as conn:
-        await conn.run_sync(table_registry.metadata.drop_all)
+        await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest.fixture

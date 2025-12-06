@@ -1,7 +1,7 @@
 from logging.config import fileConfig
 
 from app.settings import Settings
-from app.models import table_registry
+from app.models import Base
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
@@ -13,7 +13,7 @@ config.set_main_option('sqlalchemy.url', Settings().DATABASE_URL)
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = table_registry.metadata
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
